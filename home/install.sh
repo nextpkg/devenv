@@ -17,10 +17,6 @@ USER=${USER:-$(id -u -n)}
 # 如果是Linux系统，请自行将以下这一行命令放在.bashrc，.zshrc中
 if [ ${USER} != "root" ]; then
   bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  echo -e `cat <<EOF
-    Next, Manualy add Homebrew to your PATH if this is ${green}linux system${none}.
-    (echo; echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"') >> $HOME/.zshrc
-  EOF`
 fi
 
 # 确定系统的依赖包安装工具
@@ -39,10 +35,10 @@ fi
 # 安装推荐的工具
 case $CMD in
 'yum')
-   yum install -y git zsh curl tmux
+   sudo yum install -y git zsh curl tmux
    ;;
 'apt-get')
-   apt-get install -y git zsh curl tmux
+   sudo apt-get install -y git zsh curl tmux
    ;;
 'brew')
    brew install git zsh curl tmux
@@ -56,6 +52,7 @@ esac
 # 安装Oh-My-Zsh
 setup_zsh() {
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --keep-zshrc --unattended
+  mkdir -p $ZSH/custom
   cp *.zsh $ZSH/custom
 }
 
