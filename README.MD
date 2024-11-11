@@ -1,5 +1,1 @@
-## 自动化工作环境部署
-
-目前已完成:
-1. vim配置一键部署
-2. 常用配置文件自动部署
+git clone https://github.com/nextpkg/env.git
