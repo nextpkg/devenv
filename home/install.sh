@@ -13,13 +13,15 @@ _magenta() { echo -e ${magenta}$*${none};  }
 _cyan() { echo -e ${cyan}$*${none};  }
 
 USER=${USER:-$(id -u -n)}
+BREW=false
 
-# 如果是Linux系统，请自行将以下这一行命令放在.bashrc，.zshrc中
-if [ ${USER} != "root" ]; then
+# Install Homebrew
+if [[ ${USER} != "root" && $(uname) == "Linux" ]]; then
   bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  BREW=true
 fi
 
-# 确定系统的依赖包安装工具
+# Tool
 CMD="yum"
 if [[ $(command -v apt-get) || $(command -v yum) ]] && [[ $(command -v systemctl) ]]; then
   if [[ $(command -v apt-get) ]]; then
@@ -32,7 +34,7 @@ else
   exit 1
 fi
 
-# 安装推荐的工具
+# Dependence
 case $CMD in
 'yum')
    sudo yum install -y git zsh curl tmux
@@ -45,18 +47,18 @@ case $CMD in
    ;;
 esac
 
-# 使用推荐的配置
+# Config
 [[ -e .gitconfig ]] || cp -f .gitconfig $HOME/
 [[ -e .tmux.conf ]] || cp -f .tmux.conf $HOME/
 
-# 安装Oh-My-Zsh
+# Install Oh-My-Zsh
 setup_zsh() {
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --keep-zshrc --unattended
   mkdir -p $ZSH/custom
   cp *.zsh $ZSH/custom
 }
 
-# 切换shell
+# Switch Shell
 setup_shell() {
   # Test for the right location of the "shells" file
   if [ -f /etc/shells ]; then
@@ -100,13 +102,18 @@ setup_shell() {
   echo
 }
 
-# 初始化ZSH
+# Init ZSH
 setup_zshrc() {
   zsh -c "source $HOME/.zshrc && 
   omz plugin enable z docker kubectl && 
   omz theme set suvash"
+
+  if [[ $(uname) == "Linux" && ${BREW} ]]; then
+    echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.zshrc
+  fi
 }
 
+# Setup ZSH
 setup_zsh
 setup_shell
 setup_zshrc
