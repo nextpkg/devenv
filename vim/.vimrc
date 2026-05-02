@@ -229,9 +229,9 @@ augroup resCur
 augroup END
 
 "" ------------------- PLUGIN_START -------------------
-set rtp+=$HOME/.vim/bundle/vundle
+set rtp+=$HOME/.vim/bundle/Vundle.vim
 call vundle#begin()
-Plugin 'gmarik/vundle'
+Plugin 'VundleVim/Vundle.vim'
 Plugin 'flazz/vim-colorschemes'
 Plugin 'sheerun/vim-polyglot'
 Plugin 'mileszs/ack.vim'
@@ -295,7 +295,7 @@ let NERDTreeAutoDeleteBuffer=1
 let s:ctrlp_fallback = 'ag %s --nocolor -l -g ""'
 ""scan for dotfiles and dotdirs,does not apply when a command defined with g:ctrlp_user_command is being used
 let g:ctrlp_show_hidden=1
-let g:ctrlp_custom_ignore = {'dir':  '[\/]\.(git|hg|svn)$','file': '\.(exe|so|dll|pyc|swp)$'}
+let g:ctrlp_custom_ignore = {'dir':  '\v[\/]\.(git|hg|svn)$','file': '\v\.(exe|so|dll|pyc|swp)$'}
 "" Use a version control listing command when inside a repository, this is faster when scanning large projects listing command lists untracked files (slower)
 let g:ctrlp_user_command = {
     \ 'types': {

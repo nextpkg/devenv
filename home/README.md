@@ -9,6 +9,17 @@
 ```
 安装的最好方式是打开install.sh,然后一行一行复制黏贴执行（避免来不及的备份）
 
+## 系统要求
+
+- Ubuntu 20.04+
+- Debian 11+
+- Fedora 34+
+- CentOS Stream 9 / RHEL 9 兼容发行版
+- macOS 12+
+- tmux 2.9+
+
+不再支持 CentOS 7、Debian 10、Ubuntu 18.04 及更早系统。
+
 ## 快捷键
 ##### autojump
 

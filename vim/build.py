@@ -14,21 +14,20 @@ class VimPlugin:
 
     def __init__(self):
         self.setting += [{
-            "plugin": ["gmarik/vundle"],
+            "plugin": ["VundleVim/Vundle.vim"],
             "check": """
 command -v git &>/dev/null || \
 ( (command -v dnf &>/dev/null && sudo dnf -y install git) || \
 (command -v yum &>/dev/null && sudo yum -y install git) || \
-(command -v apt-get &>/dev/null && sudo apt-get install git) || \
+(command -v apt-get &>/dev/null && sudo apt-get install -y git) || \
 (command -v brew &>/dev/null && brew install git) || \
-(command "过程被中断,或者使用了不支持的包管理工具" && exit 1) )
+{ echo "过程被中断,或者使用了不支持的包管理工具"; exit 1; } )
 """,
             "command": """
-mkdir -p $HOME/.vim/bundle
-if [ ! -d $HOME/.vim/bundle/vundle ]
+mkdir -p "$HOME/.vim/bundle"
+if [ ! -d "$HOME/.vim/bundle/Vundle.vim" ]
 then
-    git clone --depth=1 https://github.com/gmarik/vundle.git || exit 1
-    mv -f vundle $HOME/.vim/bundle/
+    git clone --depth=1 https://github.com/VundleVim/Vundle.vim.git "$HOME/.vim/bundle/Vundle.vim" || exit 1
 fi
 """,
             "ending": "",
@@ -43,7 +42,8 @@ fi
                 "check": "",
                 "command": "",
                 "ending": """
-ln -sf $HOME/.vim/bundle/vim-colorschemes/colors -T $HOME/.vim/colors || exit 1
+backup_file "$HOME/.vim/colors"
+ln -s "$HOME/.vim/bundle/vim-colorschemes/colors" "$HOME/.vim/colors" || exit 1
 """,
                 "setting": """
 "" Enable 256 colors to stop the CSApprox warning and make xterm vim shine
@@ -94,9 +94,9 @@ set viewdir=$HOME/.vim/.views
 command -v ag &>/dev/null || \
 ( (command -v dnf &>/dev/null && sudo dnf -y install the_silver_searcher) || \
 (command -v yum &>/dev/null && sudo yum -y install the_silver_searcher) || \
-(command -v apt-get &>/dev/null && sudo apt-get install silversearcher-ag) || \
+(command -v apt-get &>/dev/null && sudo apt-get install -y silversearcher-ag) || \
 (command -v brew &>/dev/null && brew install the_silver_searcher) || \
-(command "过程被中断,或者使用了不支持的包管理工具" && exit 1) )
+{ echo "过程被中断,或者使用了不支持的包管理工具"; exit 1; } )
 """,
                 "command": "",
                 "ending": "",
@@ -132,7 +132,7 @@ let NERDTreeMinimalUI=1
 ""delete the file auto delete the buffer
 let NERDTreeAutoDeleteBuffer=1
 
-"let NERDTreeIgnore=['\.py[cd]$', '\~$', '\.swo$', '\.swp$', '^\.git$', '^\.hg$', '^\.svn$', '\.bzr$']
+"let NERDTreeIgnore=['\\.py[cd]$', '\\~$', '\\.swo$', '\\.swp$', '^\\.git$', '^\\.hg$', '^\\.svn$', '\\.bzr$']
 "augroup nerdtree_group
     "autocmd!
     "" open a NERDTree automatically when vim starts up if no files were specified
@@ -186,9 +186,9 @@ let NERDTreeAutoDeleteBuffer=1
 command -v ag &>/dev/null || \
 ( (command -v dnf &>/dev/null && sudo dnf -y install the_silver_searcher) || \
 (command -v yum &>/dev/null && sudo yum -y install the_silver_searcher) || \
-(command -v apt-get &>/dev/null && sudo apt-get install silversearcher-ag) || \
+(command -v apt-get &>/dev/null && sudo apt-get install -y silversearcher-ag) || \
 (command -v brew &>/dev/null && brew install the_silver_searcher) || \
-(command "过程被中断,或者使用了不支持的包管理工具" && exit 1) )
+{ echo "过程被中断,或者使用了不支持的包管理工具"; exit 1; } )
 """,
                 "command": "",
                 "ending": "",
@@ -196,15 +196,15 @@ command -v ag &>/dev/null || \
 let s:ctrlp_fallback = 'ag %s --nocolor -l -g ""'
 ""scan for dotfiles and dotdirs,does not apply when a command defined with g:ctrlp_user_command is being used
 let g:ctrlp_show_hidden=1
-let g:ctrlp_custom_ignore = {'dir':  '\v[\/]\.(git|hg|svn)$','file': '\v\.(exe|so|dll|pyc|swp)$'}
+let g:ctrlp_custom_ignore = {'dir':  '\\v[\\/]\\.(git|hg|svn)$','file': '\\v\\.(exe|so|dll|pyc|swp)$'}
 "" Use a version control listing command when inside a repository, this is faster when scanning large projects listing command lists untracked files (slower)
 let g:ctrlp_user_command = {
-    \ 'types': {
-        \ 1: ['.git', 'cd %s && git ls-files . --cached --exclude-standard --others'],
-        \ 2: ['.hg', 'hg --cwd %s locate -I .'],
-    \ },
-    \ 'fallback': s:ctrlp_fallback
-\ }
+    \\ 'types': {
+        \\ 1: ['.git', 'cd %s && git ls-files . --cached --exclude-standard --others'],
+        \\ 2: ['.hg', 'hg --cwd %s locate -I .'],
+    \\ },
+    \\ 'fallback': s:ctrlp_fallback
+\\ }
 
 "" CtrlP extensions
 let g:ctrlp_extensions = ['funky']
@@ -258,16 +258,16 @@ set statusline+=%w%h%m%r
 "set statusline+=%{fugitive#statusline()}
 "endif
 "" Filetype
-set statusline+=\ [%{&ff}/%Y]
+set statusline+=\\ [%{&ff}/%Y]
 "" Current dir
-set statusline+=\ [%{getcwd()}]
+set statusline+=\\ [%{getcwd()}]
 "" Right aligned file nav info
-set statusline+=%=%-14.(%l,%c%V%)\ %p%%
+set statusline+=%=%-14.(%l,%c%V%)\\ %p%%
 
 "" Show the ruler
 set ruler
 "" A ruler on steroids
-set rulerformat=%30(%=\:b%n%y%m%r%w\ %l,%c%V\ %P%)
+set rulerformat=%30(%=\\:b%n%y%m%r%w\\ %l,%c%V\\ %P%)
 """,
             }]
 
@@ -433,9 +433,9 @@ vmap <leader>aa :Tabularize /
 command -v ctags &>/dev/null || \
 ( (command -v dnf &>/dev/null && sudo dnf -y install ctags) || \
 (command -v yum &>/dev/null && sudo yum -y install ctags) || \
-(command -v apt-get &>/dev/null && sudo apt-get install ctags) || \
+(command -v apt-get &>/dev/null && sudo apt-get install -y ctags) || \
 (command -v brew &>/dev/null && brew install ctags) || \
-(command "过程被中断,或者使用了不支持的包管理工具" && exit 1) )
+{ echo "过程被中断,或者使用了不支持的包管理工具"; exit 1; } )
 """,
                 "command": "",
                 "ending": "",
@@ -484,9 +484,9 @@ let g:UltiSnipsJumpBackwardTrigger = '<C-k>'
 command -v ctags &>/dev/null || \
 (( command -v dnf &>/dev/null && sudo dnf -y install ctags) || \
 (command -v yum &>/dev/null && sudo yum -y install ctags) || \
-(command -v apt-get &>/dev/null && sudo apt-get install ctags) || \
+(command -v apt-get &>/dev/null && sudo apt-get install -y ctags) || \
 (command -v brew &>/dev/null && brew install ctags) || \
-(command "过程被中断,或者使用了不支持的包管理工具" && exit 1) )
+{ echo "过程被中断,或者使用了不支持的包管理工具"; exit 1; } )
 """,
                 "command": """
 mkdir -p $HOME/.vim/tags
@@ -512,9 +512,9 @@ endif
 command -v cscope &>/dev/null || \
 (( command -v dnf &>/dev/null && sudo dnf -y install cscope) || \
 (command -v yum &>/dev/null && sudo yum -y install cscope) || \
-(command -v apt-get &>/dev/null && sudo apt-get install cscope) || \
+(command -v apt-get &>/dev/null && sudo apt-get install -y cscope) || \
 (command -v brew &>/dev/null && brew install cscope) || \
-(command "过程被中断,或者使用了不支持的包管理工具" && exit 1) )
+{ echo "过程被中断,或者使用了不支持的包管理工具"; exit 1; } )
 """,
                 "command": """
 mkdir -p /tmp/cscope
@@ -568,12 +568,12 @@ hi PmenuSbar  guifg=#8A95A7 guibg=#F8F8F8 gui=NONE ctermfg=darkcyan ctermbg=ligh
 hi PmenuThumb  guifg=#F8F8F8 guibg=#8A95A7 gui=NONE ctermfg=lightgray ctermbg=darkcyan cterm=NONE
 
 "" Some convenient mappings
-"inoremap   <expr>  <Esc>       pumvisible() ? "\<C-e>" : "\<Esc>"
-inoremap    <expr>  <CR>        pumvisible() ? "\<C-y>" : "\<CR>"
-inoremap    <expr>  <Down>      pumvisible() ? "\<C-n>" : "\<Down>"
-inoremap    <expr>  <Up>        pumvisible() ? "\<C-p>" : "\<Up>"
-inoremap    <expr>  <C-d>       pumvisible() ? "\<PageDown>\<C-p>\<C-n>" : "\<C-d>"
-inoremap    <expr>  <C-u>       pumvisible() ? "\<PageUp>\<C-p>\<C-n>" : "\<C-u>"
+"inoremap   <expr>  <Esc>       pumvisible() ? "\\<C-e>" : "\\<Esc>"
+inoremap    <expr>  <CR>        pumvisible() ? "\\<C-y>" : "\\<CR>"
+inoremap    <expr>  <Down>      pumvisible() ? "\\<C-n>" : "\\<Down>"
+inoremap    <expr>  <Up>        pumvisible() ? "\\<C-p>" : "\\<Up>"
+inoremap    <expr>  <C-d>       pumvisible() ? "\\<PageDown>\\<C-p>\\<C-n>" : "\\<C-d>"
+inoremap    <expr>  <C-u>       pumvisible() ? "\\<PageUp>\\<C-p>\\<C-n>" : "\\<C-u>"
 
 "" Automatically open and close the popup menu / preview window
 au CursorMovedI,InsertLeave * if pumvisible() == 0|silent! pclose|endif
@@ -681,7 +681,7 @@ let g:ycm_confirm_extra_conf = 0
         bundle = """
 set nocompatible
 filetype off
-set rtp+=$HOME/.vim/bundle/vundle
+set rtp+=$HOME/.vim/bundle/Vundle.vim
 call vundle#begin()
 """ + plugin.strip() + """
 call vundle#end()
@@ -691,7 +691,7 @@ filetype plugin indent on
         vimrc = base.strip() + """
 
 "" ------------------- PLUGIN_START -------------------
-set rtp+=$HOME/.vim/bundle/vundle
+set rtp+=$HOME/.vim/bundle/Vundle.vim
 call vundle#begin()
 """ + plugin.strip() + """
 call vundle#end()
@@ -701,31 +701,66 @@ filetype plugin indent on
 
         install = """
 #! /bin/bash
+set -e
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+setup_brew() {
+    if [[ $(uname) == "Darwin" && ! $(command -v brew) ]]; then
+        NONINTERACTIVE=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    fi
+
+    if [[ -x /opt/homebrew/bin/brew ]]; then
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+    elif [[ -x /usr/local/bin/brew ]]; then
+        eval "$(/usr/local/bin/brew shellenv)"
+    elif [[ -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    fi
+
+    if [[ $(uname) == "Darwin" && ! $(command -v brew) ]]; then
+        echo "Homebrew 安装失败或未加入 PATH，请手动检查后重试"
+        exit 1
+    fi
+}
+
+backup_file() {
+    local file=$1
+    if [[ -e "$file" || -L "$file" ]]; then
+        local backup="${file}.bak.$(date +%Y%m%d%H%M%S)"
+        while [[ -e "$backup" || -L "$backup" ]]; do
+            backup="${file}.bak.$(date +%Y%m%d%H%M%S).$RANDOM"
+        done
+        mv -f "$file" "$backup"
+    fi
+}
+
+setup_brew
+
 ## -------------------- CHECK --------------------
 """ + check.strip() + """
 ## -------------------- PROCESS --------------------
-[ -f $HOME/.vimrc ] && mv -f $HOME/.vimrc{,.bak}
+backup_file "$HOME/.vimrc"
 """ + command.strip() + """
 ## -------------------- INSTALL --------------------
-[ ! -f .vimrc.bundle ] && (echo ".vimrc.bundle 不存在" &&  exit 1)
-vim -u .vimrc.bundle '+set nomore' '+BundleInstall!' '+BundleClean' '+qall' || (echo "请重试" && exit 1)
+[ ! -f "$SCRIPT_DIR/.vimrc.bundle" ] && (echo ".vimrc.bundle 不存在" &&  exit 1)
+vim -u "$SCRIPT_DIR/.vimrc.bundle" '+set nomore' '+BundleInstall!' '+BundleClean!' '+qall' || (echo "请重试" && exit 1)
 ## -------------------- ENDING --------------------
 """ + ending.strip() + """
 
-cp -f .vimrc $HOME/
+cp -f "$SCRIPT_DIR/.vimrc" "$HOME/"
 echo "安装完成"
 """
 
         bundle_write_object = open(this_dir + "/.vimrc.bundle", "w", encoding="utf-8")
-        bundle_write_object.write(bundle.strip())
+        bundle_write_object.write(bundle.strip() + "\n")
         bundle_write_object.close()
 
         vimrc_write_object = open(this_dir + "/.vimrc", "w", encoding="utf-8")
-        vimrc_write_object.write(vimrc.strip())
+        vimrc_write_object.write(vimrc.strip() + "\n")
         vimrc_write_object.close()
 
         install_write_object = open(this_dir + "/install.sh", "w", encoding="utf-8")
-        install_write_object.write(install.strip())
+        install_write_object.write(install.strip() + "\n")
         install_write_object.close()
         os.chmod(this_dir + "/install.sh", 0o755)
 

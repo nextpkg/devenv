@@ -25,10 +25,16 @@ devenv/
 ### 系统要求
 
 支持以下操作系统：
-- Ubuntu 16+
-- Debian 8+
-- CentOS 7+
+- Ubuntu 20.04+
+- Debian 11+
+- Fedora 34+
+- CentOS Stream 9 / RHEL 9 兼容发行版
 - macOS 12+
+
+依赖版本：
+- tmux 2.9+
+
+不再支持 CentOS 7、Debian 10、Ubuntu 18.04 及更早系统；这些系统仓库里的 tmux 版本过旧，无法加载当前配置。
 
 ### Shell 环境安装
 

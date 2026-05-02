@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 red='\e[91m'
 green='\e[92m'
@@ -14,21 +15,60 @@ _cyan() { echo -e ${cyan}$*${none};  }
 
 USER=${USER:-$(id -u -n)}
 BREW=false
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-# Install Homebrew
-if [[ ${USER} != "root" && $(uname) == "Linux" ]]; then
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  BREW=true
-fi
+backup_file() {
+  local file=$1
+  if [[ -e "$file" || -L "$file" ]]; then
+    local backup="${file}.bak.$(date +%Y%m%d%H%M%S)"
+    while [[ -e "$backup" || -L "$backup" ]]; do
+      backup="${file}.bak.$(date +%Y%m%d%H%M%S).$RANDOM"
+    done
+    mv -f "$file" "$backup"
+  fi
+}
+
+require_tmux_version() {
+  local major minor
+  read -r major minor < <(tmux -V | sed -E 's/^tmux ([0-9]+)\.([0-9]+).*/\1 \2/')
+  if [[ -z "$major" || -z "$minor" ]] || (( major < 2 || (major == 2 && minor < 9) )); then
+    echo "tmux 版本过低，需要 tmux >= 2.9；请升级系统或通过 Homebrew/Linuxbrew 安装新版 tmux"
+    exit 1
+  fi
+}
+
+setup_brew() {
+  if [[ $(uname) == "Darwin" && ${USER} != "root" && ! $(command -v brew) ]]; then
+    NONINTERACTIVE=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  fi
+
+  if [[ -x /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  elif [[ -x /usr/local/bin/brew ]]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+  elif [[ -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+  fi
+
+  if [[ $(uname) == "Darwin" && ! $(command -v brew) ]]; then
+    echo "Homebrew 安装失败或未加入 PATH，请手动检查后重试"
+    exit 1
+  fi
+}
+
+setup_brew
 
 # Tool
 CMD="yum"
-if [[ $(command -v apt-get) || $(command -v yum) ]] && [[ $(command -v systemctl) ]]; then
-  if [[ $(command -v apt-get) ]]; then
-    CMD="apt-get"
-  fi
+if [[ $(command -v apt-get) ]]; then
+  CMD="apt-get"
+elif [[ $(command -v dnf) ]]; then
+  CMD="dnf"
+elif [[ $(command -v yum) ]]; then
+  CMD="yum"
 elif [[ $(command -v brew) ]]; then
   CMD="brew"
+  BREW=true
 else
   echo -e "${red}该脚本${none} 不支持你的系统.${yellow}请确认代码${none}，仅支持 ubuntu 16+ / debian 8+ / centos 7+ / macos 12+ 系统"
   exit 1
@@ -36,6 +76,9 @@ fi
 
 # Dependence
 case $CMD in
+'dnf')
+   sudo dnf install -y git zsh curl tmux
+   ;;
 'yum')
    sudo yum install -y git zsh curl tmux
    ;;
@@ -47,15 +90,19 @@ case $CMD in
    ;;
 esac
 
+require_tmux_version
+
 # Config
-[[ -e .gitconfig ]] || cp -f .gitconfig $HOME/
-[[ -e .tmux.conf ]] || cp -f .tmux.conf $HOME/
+[[ -e "$SCRIPT_DIR/.gitconfig" ]] && backup_file "$HOME/.gitconfig" && cp -f "$SCRIPT_DIR/.gitconfig" "$HOME/"
+[[ -e "$SCRIPT_DIR/.tmux.conf" ]] && backup_file "$HOME/.tmux.conf" && cp -f "$SCRIPT_DIR/.tmux.conf" "$HOME/"
 
 # Install Oh-My-Zsh
 setup_zsh() {
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --keep-zshrc --unattended
-  mkdir -p $ZSH/custom
-  cp *.zsh $ZSH/custom
+  ZSH=${ZSH:-$HOME/.oh-my-zsh}
+  ZSH_CUSTOM=${ZSH_CUSTOM:-$ZSH/custom}
+  mkdir -p "$ZSH_CUSTOM"
+  cp "$SCRIPT_DIR"/*.zsh "$ZSH_CUSTOM"
 }
 
 # Switch Shell
@@ -71,7 +118,7 @@ setup_shell() {
   fi
 
   # Get the path to the right zsh binary
-  if ! zsh=$(command -v zsh) || ! grep -qx "$zsh" "$shells_file"; then 
+  if ! zsh=$(command -v zsh) || ! grep -qxF "$zsh" "$shells_file"; then
     if ! zsh=$(grep '^/.*/zsh$' "$shells_file" | tail -n 1) || [ ! -f "$zsh" ]; then
       echo "no zsh binary found or not present in '$shells_file'"
       echo "change your default shell manually."
@@ -89,14 +136,14 @@ setup_shell() {
   echo "Changing your shell to $zsh..."
 
   # Change shell
-  sudo sh -c "grep -wqE ^${zsh}$ ${shells_file} || echo ${zsh} >> ${shells_file}"
-
-  # Check if the shell change was successful
-  if [ $? -ne 0 ]; then
-    echo "chsh command unsuccessful. Change your default shell manually."
-  else
+  if ! grep -qxF "$zsh" "$shells_file"; then
+    echo "$zsh" | sudo tee -a "$shells_file" >/dev/null
+  fi
+  if { [[ "$USER" == "root" ]] && chsh -s "$zsh"; } || { [[ "$USER" != "root" ]] && sudo chsh -s "$zsh" "$USER"; }; then
     export SHELL="$zsh"
     echo -e "${green}Shell successfully changed to '$zsh'.${none}"
+  else
+    echo "chsh command unsuccessful. Change your default shell manually."
   fi
 
   echo
@@ -108,7 +155,7 @@ setup_zshrc() {
   omz plugin enable z docker kubectl && 
   omz theme set suvash"
 
-  if [[ $(uname) == "Linux" && ${BREW} ]]; then
+  if [[ $(uname) == "Linux" && ${BREW} == true ]] && ! grep -Fq '/home/linuxbrew/.linuxbrew/bin/brew shellenv' "$HOME/.zshrc"; then
     echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.zshrc
   fi
 }
@@ -119,4 +166,6 @@ setup_shell
 setup_zshrc
 
 echo -e "${green}Initial my home successfully.${none}"
-zsh
+if [[ -t 0 && -t 1 ]]; then
+  zsh
+fi
