@@ -1,1 +1,1 @@
-RPROMPT="[%*]"
+#RPROMPT="[%*]"
