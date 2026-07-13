@@ -4,14 +4,7 @@ set -e
 red='\e[91m'
 green='\e[92m'
 yellow='\e[93m'
-magenta='\e[95m'
-cyan='\e[96m'
 none='\e[0m'
-_red() { echo -e ${red}$*${none};  }
-_green() { echo -e ${green}$*${none};  }
-_yellow() { echo -e ${yellow}$*${none};  }
-_magenta() { echo -e ${magenta}$*${none};  }
-_cyan() { echo -e ${cyan}$*${none};  }
 
 USER=${USER:-$(id -u -n)}
 BREW=false
@@ -20,7 +13,8 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 backup_file() {
   local file=$1
   if [[ -e "$file" || -L "$file" ]]; then
-    local backup="${file}.bak.$(date +%Y%m%d%H%M%S)"
+    local backup
+    backup="${file}.bak.$(date +%Y%m%d%H%M%S)"
     while [[ -e "$backup" || -L "$backup" ]]; do
       backup="${file}.bak.$(date +%Y%m%d%H%M%S).$RANDOM"
     done
@@ -38,7 +32,7 @@ require_tmux_version() {
 }
 
 setup_brew() {
-  if [[ $(uname) == "Darwin" && ${USER} != "root" && ! $(command -v brew) ]]; then
+  if [[ $(uname) == "Darwin" && ${USER} != "root" ]] && ! command -v brew >/dev/null 2>&1; then
     NONINTERACTIVE=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
 
@@ -50,7 +44,7 @@ setup_brew() {
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
   fi
 
-  if [[ $(uname) == "Darwin" && ! $(command -v brew) ]]; then
+  if [[ $(uname) == "Darwin" ]] && ! command -v brew >/dev/null 2>&1; then
     echo "Homebrew 安装失败或未加入 PATH，请手动检查后重试"
     exit 1
   fi
@@ -70,7 +64,7 @@ elif [[ $(command -v brew) ]]; then
   CMD="brew"
   BREW=true
 else
-  echo -e "${red}该脚本${none} 不支持你的系统.${yellow}请确认代码${none}，仅支持 ubuntu 16+ / debian 8+ / centos 7+ / macos 12+ 系统"
+  echo -e "${red}该脚本${none} 不支持你的系统.${yellow}请确认代码${none}，仅支持 Ubuntu 20+ / Debian 11+ / Fedora 34+ / CentOS Stream 9+ / macOS 12+ 系统"
   exit 1
 fi
 
@@ -93,13 +87,36 @@ esac
 require_tmux_version
 
 # Config
-[[ -e "$SCRIPT_DIR/.gitconfig" ]] && backup_file "$HOME/.gitconfig" && cp -f "$SCRIPT_DIR/.gitconfig" "$HOME/"
-[[ -e "$SCRIPT_DIR/.tmux.conf" ]] && backup_file "$HOME/.tmux.conf" && cp -f "$SCRIPT_DIR/.tmux.conf" "$HOME/"
+install_config() {
+  local source=$1
+  local target=$2
+
+  [[ -e "$source" ]] || return 0
+  if [[ -f "$target" ]] && cmp -s "$source" "$target"; then
+    return
+  fi
+
+  backup_file "$target"
+  cp -f "$source" "$target"
+}
+
+install_config "$SCRIPT_DIR/.gitconfig" "$HOME/.gitconfig"
+install_config "$SCRIPT_DIR/.tmux.conf" "$HOME/.tmux.conf"
 
 # Install Oh-My-Zsh
 setup_zsh() {
-  sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --keep-zshrc --unattended
   ZSH=${ZSH:-$HOME/.oh-my-zsh}
+  export ZSH
+
+  if [[ ! -f "$ZSH/oh-my-zsh.sh" ]]; then
+    if [[ -e "$ZSH" ]]; then
+      echo "Oh My Zsh 目录已存在但安装不完整：$ZSH"
+      echo "请移走该目录后重试"
+      exit 1
+    fi
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --keep-zshrc --unattended
+  fi
+
   ZSH_CUSTOM=${ZSH_CUSTOM:-$ZSH/custom}
   mkdir -p "$ZSH_CUSTOM"
   cp "$SCRIPT_DIR"/*.zsh "$ZSH_CUSTOM"
@@ -118,8 +135,8 @@ setup_shell() {
   fi
 
   # Get the path to the right zsh binary
-  if ! zsh=$(command -v zsh) || ! grep -qxF "$zsh" "$shells_file"; then
-    if ! zsh=$(grep '^/.*/zsh$' "$shells_file" | tail -n 1) || [ ! -f "$zsh" ]; then
+  if ! zsh=$(command -v zsh) || [[ ! -x "$zsh" ]]; then
+    if ! zsh=$(grep '^/.*/zsh$' "$shells_file" | tail -n 1) || [[ ! -x "$zsh" ]]; then
       echo "no zsh binary found or not present in '$shells_file'"
       echo "change your default shell manually."
       return
@@ -139,7 +156,9 @@ setup_shell() {
   if ! grep -qxF "$zsh" "$shells_file"; then
     echo "$zsh" | sudo tee -a "$shells_file" >/dev/null
   fi
-  if { [[ "$USER" == "root" ]] && chsh -s "$zsh"; } || { [[ "$USER" != "root" ]] && sudo chsh -s "$zsh" "$USER"; }; then
+  if [[ "$SHELL" == "$zsh" ]]; then
+    echo "Shell is already '$zsh'."
+  elif { [[ "$USER" == "root" ]] && chsh -s "$zsh"; } || { [[ "$USER" != "root" ]] && sudo chsh -s "$zsh" "$USER"; }; then
     export SHELL="$zsh"
     echo -e "${green}Shell successfully changed to '$zsh'.${none}"
   else
@@ -151,12 +170,22 @@ setup_shell() {
 
 # Init ZSH
 setup_zshrc() {
-  zsh -c "source $HOME/.zshrc && 
-  omz plugin enable z docker kubectl && 
-  omz theme set suvash"
+  local zshrc="$HOME/.zshrc"
+
+  if [[ ! -f "$zshrc" ]] ||
+    ! grep -Eq '^[[:space:]]*(source|\.)[[:space:]].*oh-my-zsh\.sh' "$zshrc" ||
+    ! grep -Eq '^[[:space:]]*ZSH_THEME=' "$zshrc" ||
+    ! grep -Eq '^[[:space:]]*plugins=' "$zshrc"; then
+    backup_file "$zshrc"
+    sed "s|^export ZSH=.*$|export ZSH=\"$ZSH\"|" "$ZSH/templates/zshrc.zsh-template" > "$zshrc"
+  fi
+
+  HOME="$HOME" ZSH="$ZSH" zsh -c 'source "$HOME/.zshrc"
+    omz plugin enable z docker kubectl
+    omz theme set suvash'
 
   if [[ $(uname) == "Linux" && ${BREW} == true ]] && ! grep -Fq '/home/linuxbrew/.linuxbrew/bin/brew shellenv' "$HOME/.zshrc"; then
-    echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.zshrc
+    printf '%s\n' "eval \"\$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\"" >> "$HOME/.zshrc"
   fi
 }
 

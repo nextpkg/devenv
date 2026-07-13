@@ -10,12 +10,17 @@ class VimPlugin:
     ending : 安装插件后需要执行的shell命令
     setting: 插件设置
     """
-    setting = []
-
     def __init__(self):
-        self.setting += [{
+        self.setting = [{
             "plugin": ["VundleVim/Vundle.vim"],
             "check": """
+command -v vim &>/dev/null || \
+( (command -v dnf &>/dev/null && sudo dnf -y install vim-enhanced) || \
+(command -v yum &>/dev/null && sudo yum -y install vim-enhanced) || \
+(command -v apt-get &>/dev/null && sudo apt-get install -y vim) || \
+(command -v brew &>/dev/null && brew install vim) || \
+{ echo "过程被中断,或者使用了不支持的包管理工具"; exit 1; } )
+
 command -v git &>/dev/null || \
 ( (command -v dnf &>/dev/null && sudo dnf -y install git) || \
 (command -v yum &>/dev/null && sudo yum -y install git) || \
@@ -74,8 +79,8 @@ color gruvbox
                 "plugin": [],
                 "check": "",
                 "command": """
-mkdir -p $HOME/.vim/.backup
-mkdir -p $HOME/.vim/.views
+mkdir -p "$HOME/.vim/.backup"
+mkdir -p "$HOME/.vim/.views"
 """,
                 "ending": "",
                 "setting": """
@@ -278,7 +283,7 @@ set rulerformat=%30(%=\\:b%n%y%m%r%w\\ %l,%c%V\\ %P%)
                 "plugin": ["mbbill/undotree"],
                 "check": "",
                 "command": """
-mkdir -p $HOME/.vim/undo
+mkdir -p "$HOME/.vim/undo"
 """,
                 "ending": "",
                 "setting": """
@@ -658,20 +663,24 @@ let g:ycm_confirm_extra_conf = 0
         plugin = ""
         setting = ""
         command = ""
-        check = ""
+        checks = []
         ending = ""
         for key in self.setting:
             if key['plugin'] != []:
                 for value in key['plugin']:
                     plugin += "Plugin '" + value.strip() + "'\n"
             if key['check'] != "":
-                check += key['check'].strip() + "\n\n"
+                current_check = key['check'].strip()
+                if current_check not in checks:
+                    checks.append(current_check)
             if key['command'] != "":
                 command += key['command'].strip() + "\n\n"
             if key['setting'] != "":
                 setting += key['setting'].strip() + "\n\n"
             if key['ending'] != "":
                 ending += key['ending'].strip() + "\n\n"
+
+        check = "\n\n".join(checks)
 
         # 读取vim 基础配置
         base_object = open(this_dir + "/base.txt", encoding='utf-8')
@@ -705,7 +714,7 @@ set -e
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 setup_brew() {
-    if [[ $(uname) == "Darwin" && ! $(command -v brew) ]]; then
+    if [[ $(uname) == "Darwin" ]] && ! command -v brew >/dev/null 2>&1; then
         NONINTERACTIVE=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     fi
 
@@ -717,7 +726,7 @@ setup_brew() {
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
     fi
 
-    if [[ $(uname) == "Darwin" && ! $(command -v brew) ]]; then
+    if [[ $(uname) == "Darwin" ]] && ! command -v brew >/dev/null 2>&1; then
         echo "Homebrew 安装失败或未加入 PATH，请手动检查后重试"
         exit 1
     fi
@@ -726,7 +735,8 @@ setup_brew() {
 backup_file() {
     local file=$1
     if [[ -e "$file" || -L "$file" ]]; then
-        local backup="${file}.bak.$(date +%Y%m%d%H%M%S)"
+        local backup
+        backup="${file}.bak.$(date +%Y%m%d%H%M%S)"
         while [[ -e "$backup" || -L "$backup" ]]; do
             backup="${file}.bak.$(date +%Y%m%d%H%M%S).$RANDOM"
         done
@@ -739,6 +749,7 @@ setup_brew
 ## -------------------- CHECK --------------------
 """ + check.strip() + """
 ## -------------------- PROCESS --------------------
+[ ! -f "$SCRIPT_DIR/.vimrc" ] && (echo ".vimrc 不存在" && exit 1)
 backup_file "$HOME/.vimrc"
 """ + command.strip() + """
 ## -------------------- INSTALL --------------------
