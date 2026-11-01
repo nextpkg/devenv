@@ -364,6 +364,16 @@ let g:syntastic_cpp_compiler_options = '-std=c++11'
 nmap <leader>aa :Tabularize /
 vmap <leader>aa :Tabularize /
 
+" Select a compatible binary even when macOS BSD ctags is first on PATH.
+for s:ctags in ['ctags', 'ctags-exuberant', 'exuberant-ctags', 'universal-ctags', '/opt/homebrew/bin/ctags', '/usr/local/bin/ctags', '/opt/homebrew/opt/universal-ctags/bin/ctags', '/usr/local/opt/universal-ctags/bin/ctags']
+    if executable(s:ctags)
+        let s:version = system(shellescape(s:ctags) . ' --version')
+        if v:shell_error == 0 && s:version =~# 'Universal Ctags\|Exuberant Ctags'
+            let g:tagbar_ctags_bin = s:ctags
+            break
+        endif
+    endif
+endfor
 "" Width of the Tagbar window in characters.
 nmap <silent> <F3> :TagbarToggle<CR>
 let g:tagbar_width = 30

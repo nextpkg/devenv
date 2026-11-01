@@ -12,6 +12,21 @@
 ./install.sh
 ```
 
+安装失败会保留当前 `.vimrc`；安装成功后备份旧文件并切换新配置。
+安装只补齐缺少的插件，不自动更新已有插件，也不删除清单之外的插件目录。
+需要更新插件时，在 Vim 中显式运行 `:PluginUpdate`。
+Tagbar 使用 Universal 或 Exuberant Ctags，安装器会检查类型并排除 macOS 自带的 BSD ctags。
+
+在仓库根目录运行隔离测试：
+
+```shell
+python3 -B -m unittest discover -s tests -v
+# 如需验证真实 Vundle 行为，将最后一个参数替换为已有 Vundle 源码目录：
+python3 -B tests/vim_vundle_integration.py /path/to/Vundle.vim
+```
+
+集成测试在临时目录使用本地 Git 仓库，不下载插件，不修改用户的 Vim 配置。
+
 >
 > YouCompleteMe编译失败的情况比较复杂，可参考 https://github.com/Valloric/YouCompleteMe 编译安装，或在代码中禁止掉该选项（残暴脸）
 
