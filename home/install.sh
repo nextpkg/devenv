@@ -114,12 +114,24 @@ setup_zsh() {
       echo "请移走该目录后重试"
       exit 1
     fi
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --keep-zshrc --unattended
+    local installer
+    if ! installer=$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh); then
+      echo "Oh My Zsh 安装脚本下载失败，请检查网络后重试" >&2
+      return 1
+    fi
+    sh -c "$installer" "" --keep-zshrc --unattended || return 1
+    if [[ ! -f "$ZSH/oh-my-zsh.sh" ]]; then
+      echo "Oh My Zsh 安装未完成：缺少 $ZSH/oh-my-zsh.sh" >&2
+      return 1
+    fi
   fi
 
   ZSH_CUSTOM=${ZSH_CUSTOM:-$ZSH/custom}
   mkdir -p "$ZSH_CUSTOM"
-  cp "$SCRIPT_DIR"/*.zsh "$ZSH_CUSTOM"
+  local config
+  for config in "$SCRIPT_DIR"/*.zsh; do
+    install_config "$config" "$ZSH_CUSTOM/$(basename "$config")"
+  done
 }
 
 # Switch Shell
