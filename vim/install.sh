@@ -29,8 +29,23 @@ backup_file() {
         while [[ -e "$backup" || -L "$backup" ]]; do
             backup="${file}.bak.$(date +%Y%m%d%H%M%S).$RANDOM"
         done
-        mv -f "$file" "$backup"
+        if [[ ${2:-move} == copy ]]; then
+            cp -pP "$file" "$backup"
+        else
+            mv -f "$file" "$backup"
+        fi
     fi
+}
+
+find_compatible_ctags() {
+    local candidate version
+    for candidate in ctags ctags-exuberant exuberant-ctags universal-ctags /opt/homebrew/bin/ctags /usr/local/bin/ctags /opt/homebrew/opt/universal-ctags/bin/ctags /usr/local/opt/universal-ctags/bin/ctags; do
+        if version=$("$candidate" --version 2>/dev/null) &&
+            [[ "$version" == *"Universal Ctags"* || "$version" == *"Exuberant Ctags"* ]]; then
+            return 0
+        fi
+    done
+    return 1
 }
 
 setup_brew
@@ -42,10 +57,20 @@ command -v git &>/dev/null || ( (command -v dnf &>/dev/null && sudo dnf -y insta
 
 command -v ag &>/dev/null || ( (command -v dnf &>/dev/null && sudo dnf -y install the_silver_searcher) || (command -v yum &>/dev/null && sudo yum -y install the_silver_searcher) || (command -v apt-get &>/dev/null && sudo apt-get install -y silversearcher-ag) || (command -v brew &>/dev/null && brew install the_silver_searcher) || { echo "过程被中断,或者使用了不支持的包管理工具"; exit 1; } )
 
-command -v ctags &>/dev/null || ( (command -v dnf &>/dev/null && sudo dnf -y install ctags) || (command -v yum &>/dev/null && sudo yum -y install ctags) || (command -v apt-get &>/dev/null && sudo apt-get install -y ctags) || (command -v brew &>/dev/null && brew install ctags) || { echo "过程被中断,或者使用了不支持的包管理工具"; exit 1; } )
+if ! find_compatible_ctags; then
+    if command -v brew >/dev/null 2>&1; then
+        brew install universal-ctags
+    elif command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get install -y universal-ctags
+    elif command -v dnf >/dev/null 2>&1; then
+        sudo dnf -y install ctags
+    elif command -v yum >/dev/null 2>&1; then
+        sudo yum -y install ctags
+    fi
+    find_compatible_ctags || { echo "需要 Universal 或 Exuberant Ctags" >&2; exit 1; }
+fi
 ## -------------------- PROCESS --------------------
 [ ! -f "$SCRIPT_DIR/.vimrc" ] && (echo ".vimrc 不存在" && exit 1)
-backup_file "$HOME/.vimrc"
 mkdir -p "$HOME/.vim/bundle"
 if [ ! -d "$HOME/.vim/bundle/Vundle.vim" ]
 then
@@ -58,10 +83,15 @@ mkdir -p "$HOME/.vim/.views"
 mkdir -p "$HOME/.vim/undo"
 ## -------------------- INSTALL --------------------
 [ ! -f "$SCRIPT_DIR/.vimrc.bundle" ] && (echo ".vimrc.bundle 不存在" &&  exit 1)
-vim -u "$SCRIPT_DIR/.vimrc.bundle" '+set nomore' '+BundleInstall!' '+BundleClean!' '+qall' || (echo "请重试" && exit 1)
+vim -N -n -i NONE -es -u "$SCRIPT_DIR/.vimrc.bundle" -S "$SCRIPT_DIR/install-plugins.vim" || { echo "插件安装失败，保留现有 Vim 配置" >&2; exit 1; }
 ## -------------------- ENDING --------------------
 backup_file "$HOME/.vim/colors"
 ln -s "$HOME/.vim/bundle/vim-colorschemes/colors" "$HOME/.vim/colors" || exit 1
 
-cp -f "$SCRIPT_DIR/.vimrc" "$HOME/"
+[[ ! -d "$HOME/.vimrc" ]] || { echo ".vimrc 不能是目录" >&2; exit 1; }
+staged_vimrc=$(mktemp "$HOME/.vimrc.new.XXXXXX")
+trap 'rm -f "$staged_vimrc"' EXIT
+cp -f "$SCRIPT_DIR/.vimrc" "$staged_vimrc"
+backup_file "$HOME/.vimrc" copy
+mv -f "$staged_vimrc" "$HOME/.vimrc"
 echo "安装完成"
